@@ -1,4 +1,3 @@
-
 import { customersSchema } from "../models/customersSchema.js";
 import joi from 'joi';
 
