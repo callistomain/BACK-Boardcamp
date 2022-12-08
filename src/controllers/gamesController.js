@@ -4,10 +4,18 @@ export async function getGames(req, res) {
   const { name } = req.query;
   
   try {
-    const games = name 
-      ? await connection.query(`SELECT * FROM games WHERE name ILIKE '${name}%'`)
-      : await connection.query("SELECT * FROM games");
-    res.send(games.rows);
+    const text = name ? `SELECT * FROM games WHERE name ILIKE '${name}%'` : `SELECT * FROM games`;
+    const query = await connection.query(text);
+
+    const games = query.rows;
+    for (let i = 0; i < games.length; i++) {
+      const game = games[i];
+      const query = await connection.query(`SELECT name FROM categories WHERE id=$1`, [game.categoryId]);
+      const categoryName = query.rows[0].name;
+      game.categoryName = categoryName;
+    }
+    
+    res.send(games);
   } catch (err) {
     console.log(err.message);
     res.sendStatus(500);
