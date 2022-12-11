@@ -15,7 +15,7 @@ export async function getRentals(req, res) {
     for (let i = 0; i < l; i++) {
       const item = rentals[i];
       const customer = await connection.query(`SELECT id, name FROM customers WHERE id=$1`, [item.customerId]);
-      const game = await connection.query(`SELECT id, name, "categoryId" FROM games WHERE id=$1`, [item.gameId]);
+      const game = await connection.query(`SELECT id, name, "categoryId" FROM games WHERE id=$1`, [item.gameId]); //
       const categoryName = await connection.query(`SELECT name FROM categories WHERE id=$1`, [game.rows[0].categoryId]);
       const obj = { ...item, customer: customer.rows[0], game: {...game.rows[0], categoryName: categoryName.rows[0].name} };
       arr.push(obj);      
@@ -57,7 +57,6 @@ export async function postRentals(req, res) {
 
 export async function postRentalsReturn(req, res) {
   const { id } = req.params;
-  let query;
 
   function dateDiffInDays(a, b) {
     const msPerDay = 1000 * 60 * 60 * 24;
@@ -67,13 +66,13 @@ export async function postRentalsReturn(req, res) {
   }
 
   try {
-    query = await connection.query(`SELECT "rentDate", "daysRented", "gameId", "returnDate" FROM rentals WHERE id=$1`, [id]);
+    const text = `SELECT a."rentDate", a."daysRented", a."returnDate", b."pricePerDay" 
+    FROM rentals AS a JOIN games AS b ON a."gameId" = b.id WHERE a.id=$1`;
+    const query = await connection.query(text, [id]);
     if (query.rowCount === 0) return res.sendStatus(404);
-    const { rentDate, daysRented, gameId, returnDate } = query.rows[0];
-    if (returnDate) return res.sendStatus(400);
 
-    query = await connection.query(`SELECT "pricePerDay" FROM games WHERE id=$1`, [gameId]);
-    const { pricePerDay } = query.rows[0];
+    const { rentDate, daysRented, returnDate, pricePerDay } = query.rows[0];
+    if (returnDate) return res.sendStatus(400);
 
     const currentDate = new Date();
     rentDate.setDate(rentDate.getDate() + daysRented);
